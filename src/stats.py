@@ -1,5 +1,7 @@
 """一组最小的统计函数，用来演示 LSP 和 PR 流程。"""
 
+__all__ = ["mean", "median", "mode", "variance", "stdev", "describe"]
+
 
 def mean(values: list[float]) -> float:
     """算术平均数。"""
@@ -48,3 +50,15 @@ def variance(values: list[float], sample: bool = False) -> float:
 def stdev(values: list[float], sample: bool = False) -> float:
     """标准差，即方差的平方根。"""
     return variance(values, sample=sample) ** 0.5
+
+
+def describe(values: list[float], sample: bool = False) -> dict[str, float]:
+    """一次性返回全部指标，省得逐个调用。"""
+    return {
+        "count": len(values),
+        "mean": mean(values),
+        "median": median(values),
+        "mode": mode(values),
+        "variance": variance(values, sample=sample),
+        "stdev": stdev(values, sample=sample),
+    }
