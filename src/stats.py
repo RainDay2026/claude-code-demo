@@ -1,5 +1,7 @@
 """一组最小的统计函数，用来演示 LSP 和 PR 流程。"""
 
+__all__ = ["mean", "median", "mode", "variance", "stdev"]
+
 
 def mean(values: list[float]) -> float:
     """算术平均数。"""
