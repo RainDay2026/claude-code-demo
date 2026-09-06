@@ -3,7 +3,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from src.stats import mean, median
+from src.stats import mean, median, mode
 
 
 def test_mean():
@@ -16,3 +16,11 @@ def test_median_odd():
 
 def test_median_even():
     assert median([4, 1, 3, 2]) == 2.5
+
+
+def test_mode():
+    assert mode([1, 2, 2, 3]) == 2
+
+
+def test_mode_tie_returns_smallest():
+    assert mode([3, 3, 1, 1]) == 1
