@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>*{box-sizing:border-box} body{margin:0} img{max-width:100%}</style>
+<title>stats.py 计算台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap">
+<style>
+  :root {
+    --ground:   #f4f6f5;
+    --surface:  #ffffff;
+    --ink:      #17211f;
+    --muted:    #5f6d6a;
+    --rule:     #dbe2e0;
+    --accent:   #2f6f5e;
+    --accent-w: #2f6f5e1f;
+    --warn:     #8f4a14;
+    --dot:      #7d9b92;
+
+    --sans:  "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    --serif: "IBM Plex Serif", Georgia, serif;
+    --mono:  "IBM Plex Mono", ui-monospace, "Cascadia Mono", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:   #101615;
+      --surface:  #18201e;
+      --ink:      #e4ebe8;
+      --muted:    #93a29e;
+      --rule:     #2a3532;
+      --accent:   #63b89d;
+      --accent-w: #63b89d24;
+      --warn:     #d09257;
+      --dot:      #5c7d74;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:   #101615;
+    --surface:  #18201e;
+    --ink:      #e4ebe8;
+    --muted:    #93a29e;
+    --rule:     #2a3532;
+    --accent:   #63b89d;
+    --accent-w: #63b89d24;
+    --warn:     #d09257;
+    --dot:      #5c7d74;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 940px;
+    margin: 0 auto;
+    padding: 40px 24px 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+
+  header { display: flex; flex-direction: column; gap: 6px; }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 30px;
+    line-height: 1.2;
+    margin: 0;
+    text-wrap: balance;
+    letter-spacing: -0.01em;
+  }
+  h1 .dotpy { font-family: var(--mono); font-weight: 500; font-size: 0.86em; }
+  header p { margin: 0; color: var(--muted); max-width: 60ch; }
+
+  .panels {
+    display: grid;
+    grid-template-columns: minmax(0, 4fr) minmax(0, 5fr);
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 720px) { .panels { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .panel h2 {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    margin: 0;
+    color: var(--muted);
+  }
+
+  textarea {
+    font-family: var(--mono);
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--ink);
+    background: var(--ground);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    padding: 10px 12px;
+    resize: vertical;
+    min-height: 108px;
+    width: 100%;
+  }
+  textarea:focus-visible,
+  button:focus-visible,
+  input:focus-visible + .switch-face {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .hint { font-size: 13px; color: var(--muted); margin: 0; }
+
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+  .switch { display: inline-flex; align-items: center; gap: 9px; cursor: pointer; }
+  .switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .switch-face {
+    width: 34px; height: 19px;
+    border-radius: 10px;
+    background: var(--rule);
+    position: relative;
+    transition: background .16s ease;
+    flex: none;
+  }
+  .switch-face::after {
+    content: "";
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 15px; height: 15px;
+    border-radius: 50%;
+    background: var(--surface);
+    transition: transform .16s ease;
+  }
+  .switch input:checked + .switch-face { background: var(--accent); }
+  .switch input:checked + .switch-face::after { transform: translateX(15px); }
+  .switch-label { font-size: 14px; }
+  .switch-label code { font-family: var(--mono); font-size: 13px; }
+
+  .samples { display: flex; flex-wrap: wrap; gap: 8px; }
+  button.sample {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--ink);
+    background: transparent;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    padding: 4px 9px;
+    cursor: pointer;
+  }
+  button.sample:hover { border-color: var(--accent); color: var(--accent); }
+
+  dl.metrics { margin: 0; display: flex; flex-direction: column; }
+  dl.metrics > div {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: baseline;
+    gap: 16px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  dl.metrics > div:last-child { border-bottom: 0; }
+  dl.metrics dt { font-family: var(--mono); font-size: 13.5px; color: var(--muted); }
+  dl.metrics dt b { color: var(--ink); font-weight: 500; }
+  dl.metrics dd {
+    margin: 0;
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 17px;
+    color: var(--ink);
+  }
+  dl.metrics > div.lead dd { font-size: 21px; color: var(--accent); }
+
+  .error {
+    font-family: var(--mono);
+    font-size: 13.5px;
+    color: var(--warn);
+    border-left: 2px solid var(--warn);
+    padding: 8px 0 8px 12px;
+    margin: 0;
+  }
+
+  .strip { display: flex; flex-direction: column; gap: 10px; }
+  .strip-frame { overflow-x: auto; }
+  svg { display: block; width: 100%; min-width: 520px; height: auto; }
+  .caption { font-size: 13px; color: var(--muted); margin: 0; max-width: 62ch; }
+  .caption code { font-family: var(--mono); font-size: 12.5px; }
+
+  footer {
+    border-top: 1px solid var(--rule);
+    padding-top: 16px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  footer code { font-family: var(--mono); }
+  footer a { color: var(--accent); }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><span class="dotpy">stats.py</span> 计算台</h1>
+    <p>输入一组数字，看六个统计量同时变化。计算逻辑与仓库里的 Python 模块逐行对应，包括总体／样本方差的切换和两种报错条件。</p>
+  </header>
+
+  <div class="panels">
+    <section class="panel">
+      <h2>输入数据</h2>
+      <textarea id="input" spellcheck="false" aria-label="数字，用逗号、空格或换行分隔">2, 4, 4, 4, 5, 5, 7, 9</textarea>
+      <p class="hint">逗号、空格、换行都能分隔。</p>
+
+      <div class="controls">
+        <label class="switch">
+          <input type="checkbox" id="sample">
+          <span class="switch-face"></span>
+          <span class="switch-label">样本方差 <code>sample=True</code></span>
+        </label>
+      </div>
+      <p class="hint" id="divisor">当前除以 <b>n</b>，即总体方差。</p>
+
+      <div class="samples">
+        <button class="sample" data-v="2, 4, 4, 4, 5, 5, 7, 9">教科书样例</button>
+        <button class="sample" data-v="1, 1, 1, 1">零方差</button>
+        <button class="sample" data-v="3, 3, 1, 1">众数平局</button>
+        <button class="sample" data-v="42">单元素</button>
+        <button class="sample" data-v="">空</button>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>describe() 返回值</h2>
+      <div id="results"></div>
+    </section>
+  </div>
+
+  <section class="strip">
+    <div class="strip-frame">
+      <svg id="plot" viewBox="0 0 720 176" role="img" aria-labelledby="plot-title">
+        <title id="plot-title">数据点分布，标注平均数、中位数、众数与一倍标准差范围</title>
+      </svg>
+    </div>
+    <p class="caption">每个方块是一个数据点，相同值向上堆叠 —— 堆得最高的那一列就是众数。浅色带是 <code>mean ± stdev</code> 的范围。</p>
+  </section>
+
+  <footer>
+    对应 <code>src/stats.py</code> 的 <code>mean / median / mode / variance / stdev / describe</code>，共 15 个测试用例。源码在 <a href="https://github.com/RainDay2026/claude-code-demo">RainDay2026/claude-code-demo</a>。
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var SVG_NS = "http://www.w3.org/2000/svg";
+  var input = document.getElementById("input");
+  var sampleBox = document.getElementById("sample");
+  var divisorNote = document.getElementById("divisor");
+  var results = document.getElementById("results");
+  var plot = document.getElementById("plot");
+
+  function parse(text) {
+    var parts = text.split(/[\s,;]+/).filter(function (s) { return s.length > 0; });
+    var nums = [];
+    for (var i = 0; i < parts.length; i++) {
+      var n = Number(parts[i]);
+      if (!isFinite(n)) return { error: '"' + parts[i] + '" 不是数字' };
+      nums.push(n);
+    }
+    return { values: nums };
+  }
+
+  function mean(v) { return v.reduce(function (a, b) { return a + b; }, 0) / v.length; }
+
+  function median(v) {
+    var o = v.slice().sort(function (a, b) { return a - b; });
+    var mid = Math.floor(o.length / 2);
+    return o.length % 2 === 1 ? o[mid] : (o[mid - 1] + o[mid]) / 2;
+  }
+
+  function mode(v) {
+    var counts = new Map();
+    v.forEach(function (x) { counts.set(x, (counts.get(x) || 0) + 1); });
+    var top = Math.max.apply(null, Array.from(counts.values()));
+    var tied = Array.from(counts.keys()).filter(function (k) { return counts.get(k) === top; });
+    return Math.min.apply(null, tied);
+  }
+
+  function variance(v, isSample) {
+    var m = mean(v);
+    var total = v.reduce(function (a, x) { return a + (x - m) * (x - m); }, 0);
+    return total / (isSample ? v.length - 1 : v.length);
+  }
+
+  // 与 Python 版本相同的两条拒绝路径
+  function guard(v, isSample) {
+    if (v.length === 0) return "ValueError: values 不能为空";
+    if (isSample && v.length < 2) return "ValueError: 样本方差至少需要 2 个元素";
+    return null;
+  }
+
+  function fmt(n) {
+    if (Number.isInteger(n)) return String(n);
+    return n.toFixed(4).replace(/0+$/, "").replace(/\.$/, "");
+  }
+
+  var ROWS = [
+    { key: "count",    label: "count",    lead: false },
+    { key: "mean",     label: "mean",     lead: true  },
+    { key: "median",   label: "median",   lead: true  },
+    { key: "mode",     label: "mode",     lead: true  },
+    { key: "variance", label: "variance", lead: false },
+    { key: "stdev",    label: "stdev",    lead: false }
+  ];
+
+  function renderMetrics(stats) {
+    var dl = document.createElement("dl");
+    dl.className = "metrics";
+    ROWS.forEach(function (row) {
+      var wrap = document.createElement("div");
+      if (row.lead) wrap.className = "lead";
+      var dt = document.createElement("dt");
+      var b = document.createElement("b");
+      b.textContent = row.label;
+      dt.appendChild(b);
+      dt.appendChild(document.createTextNode("()"));
+      var dd = document.createElement("dd");
+      dd.textContent = fmt(stats[row.key]);
+      wrap.appendChild(dt);
+      wrap.appendChild(dd);
+      dl.appendChild(wrap);
+    });
+    results.replaceChildren(dl);
+  }
+
+  function renderError(msg) {
+    var p = document.createElement("p");
+    p.className = "error";
+    p.textContent = msg;
+    results.replaceChildren(p);
+  }
+
+  function el(name, attrs, text) {
+    var node = document.createElementNS(SVG_NS, name);
+    Object.keys(attrs).forEach(function (k) { node.setAttribute(k, attrs[k]); });
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  function clearPlot() {
+    while (plot.childNodes.length > 1) plot.removeChild(plot.lastChild);
+  }
+
+  function renderPlot(values, stats) {
+    clearPlot();
+    if (values.length === 0) return;
+
+    var css = getComputedStyle(document.documentElement);
+    var ink = css.getPropertyValue("--ink").trim();
+    var muted = css.getPropertyValue("--muted").trim();
+    var rule = css.getPropertyValue("--rule").trim();
+    var accent = css.getPropertyValue("--accent").trim();
+    var band = css.getPropertyValue("--accent-w").trim();
+    var dotFill = css.getPropertyValue("--dot").trim();
+
+    var L = 56, R = 664, AXIS = 104;
+    var lo = Math.min.apply(null, values);
+    var hi = Math.max.apply(null, values);
+    if (lo === hi) { lo -= 1; hi += 1; }
+    var pad = (hi - lo) * 0.12;
+    lo -= pad; hi += pad;
+    var x = function (v) { return L + (v - lo) / (hi - lo) * (R - L); };
+
+    // ±1σ 范围带（标准差为 0 时不画）
+    if (stats.stdev > 0) {
+      var bx = x(stats.mean - stats.stdev);
+      var bw = x(stats.mean + stats.stdev) - bx;
+      plot.appendChild(el("rect", {
+        x: bx, y: 30, width: bw, height: AXIS - 30,
+        fill: band
+      }));
+    }
+
+    plot.appendChild(el("line", { x1: L, y1: AXIS, x2: R, y2: AXIS, stroke: rule, "stroke-width": 1 }));
+
+    // 数据点：相同值向上堆叠成点图
+    var seen = new Map();
+    values.slice().sort(function (a, b) { return a - b; }).forEach(function (v) {
+      var k = seen.get(v) || 0;
+      seen.set(v, k + 1);
+      plot.appendChild(el("rect", {
+        x: x(v) - 4.5, y: AXIS - 11 - k * 11,
+        width: 9, height: 9, rx: 1.5,
+        fill: dotFill
+      }));
+    });
+
+    // 轴两端刻度
+    [[lo + pad, "start"], [hi - pad, "end"]].forEach(function (t) {
+      plot.appendChild(el("text", {
+        x: x(t[0]), y: AXIS + 17,
+        fill: muted, "font-family": "IBM Plex Mono, monospace", "font-size": 11.5,
+        "text-anchor": t[1]
+      }, fmt(t[0])));
+    });
+
+    // 三个中心趋势标记，分三行避免标签重叠
+    var marks = [
+      { v: stats.mean,   name: "mean",   row: 0 },
+      { v: stats.median, name: "median", row: 1 },
+      { v: stats.mode,   name: "mode",   row: 2 }
+    ];
+    marks.forEach(function (m) {
+      var mx = x(m.v);
+      var my = AXIS + 26 + m.row * 15;
+      plot.appendChild(el("line", {
+        x1: mx, y1: 30, x2: mx, y2: my,
+        stroke: accent, "stroke-width": 1, "stroke-dasharray": "2 3", opacity: 0.55
+      }));
+      plot.appendChild(el("circle", { cx: mx, cy: AXIS, r: 3, fill: accent }));
+      var anchor = mx > (L + R) / 2 ? "end" : "start";
+      var dx = anchor === "end" ? -7 : 7;
+      plot.appendChild(el("text", {
+        x: mx + dx, y: my + 4,
+        fill: ink, "font-family": "IBM Plex Mono, monospace", "font-size": 12,
+        "text-anchor": anchor
+      }, m.name + " " + fmt(m.v)));
+    });
+  }
+
+  function update() {
+    var isSample = sampleBox.checked;
+    divisorNote.innerHTML = isSample
+      ? "当前除以 <b>n − 1</b>，即样本方差。"
+      : "当前除以 <b>n</b>，即总体方差。";
+
+    var parsed = parse(input.value);
+    if (parsed.error) {
+      renderError(parsed.error);
+      clearPlot();
+      return;
+    }
+
+    var values = parsed.values;
+    var bad = guard(values, isSample);
+    if (bad) {
+      renderError(bad);
+      clearPlot();
+      return;
+    }
+
+    var v = variance(values, isSample);
+    var stats = {
+      count: values.length,
+      mean: mean(values),
+      median: median(values),
+      mode: mode(values),
+      variance: v,
+      stdev: Math.sqrt(v)
+    };
+    renderMetrics(stats);
+    renderPlot(values, stats);
+  }
+
+  input.addEventListener("input", update);
+  sampleBox.addEventListener("change", update);
+  Array.prototype.forEach.call(document.querySelectorAll("button.sample"), function (b) {
+    b.addEventListener("click", function () {
+      input.value = b.getAttribute("data-v");
+      update();
+    });
+  });
+
+  if (window.matchMedia) {
+    var mq = window.matchMedia("(prefers-color-scheme: dark)");
+    if (mq.addEventListener) mq.addEventListener("change", update);
+  }
+
+  update();
+})();
+</script>
+</body>
+</html>
